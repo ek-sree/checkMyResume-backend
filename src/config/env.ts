@@ -3,7 +3,16 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 
-const required = ['MONGODB_URI', 'JWT_SECRET', 'GROQ_API_KEY', 'RAZORPAY_KEY_ID', 'RAZORPAY_KEY_SECRET'] as const;
+const required = [
+  'MONGODB_URI',
+  'JWT_SECRET',
+  'GROQ_API_KEY',
+  'RAZORPAY_KEY_ID',
+  'RAZORPAY_KEY_SECRET',
+  'SMTP_HOST',
+  'SMTP_USER',
+  'SMTP_PASS',
+] as const;
 
 const missing = required.filter((key) => !process.env[key]);
 if (missing.length && process.env.NODE_ENV === 'production') {
@@ -52,7 +61,7 @@ export const env = {
     user: process.env.SMTP_USER || '',
     pass: process.env.SMTP_PASS || '',
     from: process.env.EMAIL_FROM || 'CareerForge AI <no-reply@careerforge.ai>',
-    enabled: Boolean(process.env.SMTP_HOST && process.env.SMTP_USER),
+    enabled: Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS),
   },
 
   contactEmail: process.env.CONTACT_EMAIL || 'sreeharisree105@gmail.com',

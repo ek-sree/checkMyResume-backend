@@ -31,6 +31,9 @@ interface Mail {
 
 async function send(mail: Mail): Promise<void> {
   if (!transporter) {
+    if (env.isProd) {
+      throw new Error('SMTP is not configured for production email delivery.');
+    }
     logger.info(`[email:dev] To: ${mail.to} | Subject: ${mail.subject}\n${mail.text}`);
     return;
   }
@@ -38,7 +41,8 @@ async function send(mail: Mail): Promise<void> {
     await transporter.sendMail({ from: env.email.from, ...mail });
     logger.info(`Email sent to ${mail.to}: ${mail.subject}`);
   } catch (err) {
-    logger.warn('Email send failed:', (err as Error).message);
+    logger.error('Email send failed:', err instanceof Error ? err.message : err);
+    throw err;
   }
 }
 
