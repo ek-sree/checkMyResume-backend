@@ -1,24 +1,7 @@
-import nodemailer, { type Transporter } from 'nodemailer';
+import { Resend } from 'resend';
 import { env } from '../config/env';
 import { logger } from '../utils/logger';
 import type { IPayment } from '../models/Payment';
-
-/**
- * Email notifications. When SMTP is configured we send real mail; otherwise we
- * log the message so the feature is fully demonstrable without any provider.
- */
-let transporter: Transporter | null = null;
-if (env.email.enabled) {
-  transporter = nodemailer.createTransport({
-    host: env.email.host,
-    port: env.email.port,
-    secure: env.email.port === 465,
-    auth: { user: env.email.user, pass: env.email.pass },
-  });
-  logger.info('SMTP configured — email notifications are live.');
-} else {
-  logger.info('SMTP not configured — emails will be logged to the console.');
-}
 
 interface Mail {
   to: string;
@@ -29,19 +12,94 @@ interface Mail {
   attachments?: { filename: string; content: Buffer }[];
 }
 
+/**
+ * Parse a "Name <email@domain>" string into { name?, email }.
+ */
+function parseSender(sender: string): { name?: string; email: string } {
+  if (!sender) return { email: '' };
+  const match = sender.match(/^(.*?)\s*<(.+@.+)>$/);
+  if (match) {
+    const name = match[1].trim().replace(/^"|"$/g, '');
+    const email = match[2].trim();
+    return { name: name || undefined, email };
+  }
+  return { email: sender.trim() };
+}
+
+function toRecipientArray(to: string): { email: string }[] {
+  if (!to) return [];
+  return to
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .map((email) => ({ email }));
+}
+
 async function send(mail: Mail): Promise<void> {
-  if (!transporter) {
+  if (!env.email.apiKey) {
+    logger.warn('Email sending is disabled. Skipping email send.');
+    return;
+  }
+  if (!env.email.apiKey) {
     if (env.isProd) {
-      throw new Error('SMTP is not configured for production email delivery.');
+      throw new Error('Brevo API key is not configured for production email delivery.');
     }
     logger.info(`[email:dev] To: ${mail.to} | Subject: ${mail.subject}\n${mail.text}`);
     return;
   }
+
+  const sender = parseSender(env.email.from);
+  if (!sender.email) {
+    const msg = 'Invalid email.from configuration';
+    logger.error(msg);
+    throw new Error(msg);
+  }
+
+  const payload: Record<string, unknown> = {
+    sender: { name: sender.name, email: sender.email },
+    to: toRecipientArray(mail.to),
+    subject: mail.subject,
+    ...(mail.html ? { htmlContent: mail.html } : { textContent: mail.text }),
+  };
+
+  if (mail.replyTo) payload.replyTo = { email: mail.replyTo };
+
+  if (mail.attachments && mail.attachments.length) {
+    payload.attachment = mail.attachments.map((att) => ({
+      name: att.filename,
+      content: att.content.toString('base64'),
+    }));
+  }
+
+  const url = 'https://api.brevo.com/v3/smtp/email';
+  const headers = {
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+    'api-key': env.email.apiKey,
+  } as const;
+
   try {
-    await transporter.sendMail({ from: env.email.from, ...mail });
+    const res = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      let errBody: any = null;
+      try {
+        errBody = await res.json();
+      } catch {
+        errBody = await res.text();
+      }
+      const message = errBody && errBody.message ? errBody.message : `Brevo API error ${res.status}`;
+      logger.error(`Brevo API error ${res.status}:`, errBody);
+      throw new Error(message);
+    }
+
     logger.info(`Email sent to ${mail.to}: ${mail.subject}`);
   } catch (err) {
-    logger.error('Email send failed:', err instanceof Error ? err.message : err);
+    logger.error('Brevo email send failed:', err instanceof Error ? err.message : err);
     throw err;
   }
 }

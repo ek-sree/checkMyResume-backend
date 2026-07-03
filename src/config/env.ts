@@ -9,9 +9,7 @@ const required = [
   'GROQ_API_KEY',
   'RAZORPAY_KEY_ID',
   'RAZORPAY_KEY_SECRET',
-  'SMTP_HOST',
-  'SMTP_USER',
-  'SMTP_PASS',
+  'BREVO_API_KEY',
 ] as const;
 
 const missing = required.filter((key) => !process.env[key]);
@@ -35,7 +33,7 @@ export const env = {
   appName: process.env.APP_NAME || 'CareerForge AI',
   maxResumes: Number(process.env.MAX_RESUMES) || 5,
 
-  adminEmails: (process.env.ADMIN_EMAILS || 'sreeharisree105@gmail.com')
+  adminEmails: (process.env.ADMIN_EMAILS || 'checkmyresume105@gmail.com')
     .split(',')
     .map((e) => e.trim().toLowerCase())
     .filter(Boolean),
@@ -56,12 +54,9 @@ export const env = {
   },
 
   email: {
-    host: process.env.SMTP_HOST || '',
-    port: Number(process.env.SMTP_PORT) || 587,
-    user: process.env.SMTP_USER || '',
-    pass: process.env.SMTP_PASS || '',
-    from: process.env.EMAIL_FROM || 'CareerForge AI <no-reply@careerforge.ai>',
-    enabled: Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS),
+    from: process.env.EMAIL_FROM || 'CheckMyResume AI <checkmyresume105@gmail.com>',
+    apiKey: process.env.BREVO_API_KEY || '',
+    enabled: Boolean(process.env.BREVO_API_KEY),
   },
 
   contactEmail: process.env.CONTACT_EMAIL || 'sreeharisree105@gmail.com',
