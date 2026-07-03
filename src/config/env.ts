@@ -30,7 +30,7 @@ export const env = {
   accessTtl: process.env.ACCESS_TOKEN_TTL || '15m',
   refreshTtl: process.env.REFRESH_TOKEN_TTL || '7d',
 
-  appName: process.env.APP_NAME || 'CareerForge AI',
+  appName: process.env.APP_NAME || 'CheckMyResume AI',
   maxResumes: Number(process.env.MAX_RESUMES) || 5,
 
   adminEmails: (process.env.ADMIN_EMAILS || 'checkmyresume105@gmail.com')
