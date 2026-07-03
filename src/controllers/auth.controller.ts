@@ -16,7 +16,11 @@ type UserDoc = HydratedDocument<IUser, IUserMethods>;
 const ACCESS_COOKIE = 'at';
 const REFRESH_COOKIE = 'rt';
 const REFRESH_PATH = '/api/auth';
-const baseCookie = { httpOnly: true, secure: env.isProd, sameSite: 'lax' as const };
+const baseCookie = {
+  httpOnly: true,
+  secure: env.isProd,
+  sameSite: env.isProd ? ('none' as const) : ('lax' as const),
+};
 
 function setAuthCookies(res: Response, user: UserDoc): void {
   res.cookie(ACCESS_COOKIE, signAccessToken(user), { ...baseCookie, maxAge: 15 * 60 * 1000 });
